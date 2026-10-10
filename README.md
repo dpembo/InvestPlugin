@@ -33,7 +33,7 @@ Every `daily-interval-hours` (default 24) one global % is drawn at random betwee
 | `/invest auto` | Toggle auto-invest |
 | `/invest status` | Print your summary |
 | `/invest reload` | Reload config.yml (admin; storage changes need a restart) |
-| `/invest runcycle` | Run the daily cycle now (admin; restarts the timer) |
+| `/invest runcycle [percent]` | Run the daily cycle now (admin; restarts the timer). Optional percent forces that exact move, e.g. `/invest runcycle -1.5` |
 
 Permissions: `investplugin.invest` (default: everyone), `investplugin.admin` (default: op).
 

@@ -268,16 +268,19 @@ public final class InvestManager {
         if (now < next) return;
         // after a long downtime run a single catch-up cycle instead of many
         long newLast = (now - next >= intervalMillis()) ? now : next;
-        runCycle(now, newLast);
+        runCycle(now, newLast, null);
     }
 
-    /** Admin: run a cycle right now (also restarts the timer). Returns the market % that was applied. */
-    public double forceCycle() {
+    /**
+     * Admin: run a cycle right now (also restarts the timer). Pass a percent to force that exact market move
+     * (handy for testing), or null for the normal random one. Returns the market % that was applied.
+     */
+    public double forceCycle(Double forcedPercent) {
         long now = System.currentTimeMillis();
-        return runCycle(now, now);
+        return runCycle(now, now, forcedPercent);
     }
 
-    private double runCycle(long now, long newLastCycle) {
+    private double runCycle(long now, long newLastCycle, Double forcedPercent) {
         FileConfiguration c = cfg();
         double min = c.getDouble("daily-min-percent", -1.0);
         double max = c.getDouble("daily-max-percent", 2.0);
@@ -286,7 +289,9 @@ public final class InvestManager {
             min = max;
             max = t;
         }
-        double pct = Money.round2(min + ThreadLocalRandom.current().nextDouble() * (max - min));
+        double pct = forcedPercent != null
+                ? Money.round2(forcedPercent)
+                : Money.round2(min + ThreadLocalRandom.current().nextDouble() * (max - min));
 
         Rules rules = rules();
         List<Account> changed = new ArrayList<>();

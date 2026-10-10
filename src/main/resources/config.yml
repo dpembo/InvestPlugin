@@ -86,6 +86,7 @@ messages:
   players-only: "&cOnly players can use this command."
   usage: "&eUsage: &6/invest [deposit <amount|all> | withdraw <amount|all> | auto | status]"
   reloaded: "&aInvestPlugin config reloaded. (Storage changes need a restart.)"
+  invalid-percent: "&cInvalid percent. Example: &6/invest runcycle -1.5"
   cycle-forced: "&aDaily cycle executed: &f{percent}"
   enter-deposit: "&eType the amount to deposit in chat (e.g. &65000&e, &610k&e, &61.5m&e or &6all&e). Type &ccancel &eto abort."
   enter-withdraw: "&eType the amount to withdraw (a &c{fee}% &efee applies). Use &6all &efor everything or &ccancel&e."

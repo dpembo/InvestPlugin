@@ -36,7 +36,20 @@ public class InvestCommand implements CommandExecutor, TabCompleter {
                 plugin.reloadPlugin();
                 sender.sendMessage(plugin.msg("reloaded", Map.of()));
             } else {
-                double pct = plugin.getInvestManager().forceCycle();
+                Double forced = null;
+                if (args.length > 1) {
+                    try {
+                        forced = Double.parseDouble(args[1]);
+                    } catch (NumberFormatException e) {
+                        sender.sendMessage(plugin.msg("invalid-percent", Map.of()));
+                        return true;
+                    }
+                    if (!Double.isFinite(forced)) {
+                        sender.sendMessage(plugin.msg("invalid-percent", Map.of()));
+                        return true;
+                    }
+                }
+                double pct = plugin.getInvestManager().forceCycle(forced);
                 sender.sendMessage(plugin.msg("cycle-forced", Map.of("percent", Money.percent(pct))));
             }
             return true;
@@ -88,6 +101,8 @@ public class InvestCommand implements CommandExecutor, TabCompleter {
             if (sender.hasPermission("investplugin.admin")) out.addAll(List.of("reload", "runcycle"));
             String prefix = args[0].toLowerCase(Locale.ROOT);
             out.removeIf(s -> !s.startsWith(prefix));
+        } else if (args.length == 2 && args[0].equalsIgnoreCase("runcycle") && sender.hasPermission("investplugin.admin")) {
+            out.addAll(List.of("-1", "0", "2"));
         } else if (args.length == 2 && (args[0].equalsIgnoreCase("deposit") || args[0].equalsIgnoreCase("withdraw"))) {
             out.add("all");
         }
