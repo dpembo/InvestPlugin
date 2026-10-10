@@ -1,108 +1,57 @@
-# InvestPlugin — Paper 1.21.1
+# InvestPlugin 2.0 — Paper 1.21
 
-A fully-featured investment GUI plugin for Paper 1.21.1 servers.
+A capital + investment-pot investing plugin (Globeworks Investment System) with a chest GUI,
+a daily market move and SQLite or MariaDB storage.
 
----
+## How it works
 
-## Features
+Each player has **Capital** (their principal) and an **Investment Pot** (profit / loss buffer).
+**Total value = Capital + Pot.**
 
-- `/invest` opens an interactive chest GUI
-- Players can **invest money**, **collect earnings**, **delete investments**, and toggle **auto-collect**
-- Earnings calculated as: `invested_amount × rate` per second
-- Fully configurable max investment cap and rate
-- Confirmation screen before committing an investment
-- Data persists between restarts via `data.yml`
+Every `daily-interval-hours` (default 24) one global % is drawn at random between
+`daily-min-percent` (-1.0) and `daily-max-percent` (+2.0) and applied to every player's **capital**:
 
----
+| Daily result | Auto-invest ON | Auto-invest OFF |
+|---|---|---|
+| Gain | added to capital (compounds) | added to the pot (capital fixed) |
+| Loss | pot first, then capital | pot first, then capital |
 
-## Requirements
+* **Withdrawals** take `withdraw-fee-percent` (5%) of the amount withdrawn, from the pot first, then capital.
+* **Deposits** go into capital, up to `max-capital` (1,000,000).
+* **Freeze:** at total value ≥ `freeze-threshold` (2,000,000) the account is frozen — no growth, no deposits,
+  withdrawals still allowed. It unfreezes when capital ≤ `max-capital` **and** total < `freeze-threshold`.
+* Accounts with capital ≤ 0 and frozen accounts are skipped by the daily cycle. Capital, pot and total never go below 0.
+* Players with an investment get a summary on join (`notify-on-join`); the daily % can be broadcast (`broadcast-daily-change`).
 
-| Dependency | Where to get it |
+## Commands
+
+| Command | Description |
 |---|---|
-| **Paper 1.21.1** | https://papermc.io/downloads |
-| **Vault** | https://www.spigotmc.org/resources/vault.34315/ |
-| **Economy plugin** | EssentialsX recommended: https://essentialsx.net |
-| **Java 21+** | For building only |
-| **Maven 3.6+** | For building only |
+| `/invest` | Open the GUI (capital, pot, total, withdrawable, 7-day market % and your gains/losses, auto-invest, deposit, withdraw) |
+| `/invest deposit <amount\|all>` | Deposit (amounts accept `10k`, `1.5m`, `1b`) |
+| `/invest withdraw <amount\|all>` | Withdraw (fee applies) |
+| `/invest auto` | Toggle auto-invest |
+| `/invest status` | Print your summary |
+| `/invest reload` | Reload config.yml (admin; storage changes need a restart) |
+| `/invest runcycle` | Run the daily cycle now (admin; restarts the timer) |
 
----
+Permissions: `investplugin.invest` (default: everyone), `investplugin.admin` (default: op).
+
+## Storage
+
+`storage.type` in `config.yml` is `sqlite` (default, `plugins/InvestPlugin/invest.db`) or `mariadb`.
+The JDBC drivers are downloaded by the server on first start (declared as `libraries` in `plugin.yml`), so the
+server needs access to Maven Central once. Everything is saved asynchronously, so the main thread never waits on the database.
+Run **one** server per database: balances are cached in memory.
+
+### Migrating from 1.x
+If a `data.yml` from version 1.x exists it is imported on first start and renamed to `data.yml.migrated`.
+`invested` becomes **capital**, uncollected `claimable` earnings become the **pot**; auto-invest follows `default-auto-invest`.
+Old `invest-rate`, `max-invest` and `payout-interval` options no longer exist. Delete the old `config.yml` once
+to generate the new, documented one.
+
+## Configuration
+Rates, fee, limits, schedule, join/broadcast toggles, all messages and all GUI items (material, name, lore) are in `config.yml`.
 
 ## Building
-
-```bash
-chmod +x build.sh
-./build.sh
-```
-
-The compiled jar will be at `target/InvestPlugin-1.0.0.jar`.
-
----
-
-## Installation
-
-1. Place `InvestPlugin-1.0.0.jar` in your server's `plugins/` folder
-2. Ensure Vault and an economy plugin are installed
-3. Start/restart the server
-4. Configure `plugins/InvestPlugin/config.yml`
-
----
-
-## Configuration (`config.yml`)
-
-```yaml
-# Max money a player can have invested at once (0 = unlimited)
-max-invest: 1000000.0
-
-# Earnings multiplier per second
-# invested_amount × invest-rate = earnings per second
-# Example: 1000 invested × 0.001 rate = $1.00/sec
-invest-rate: 0.001
-
-# How often payouts are processed (20 ticks = 1 second)
-payout-interval: 20
-```
-
----
-
-## Commands & Permissions
-
-| Command | Description | Permission |
-|---|---|---|
-| `/invest` | Open the investment GUI | `investplugin.invest` (default: all players) |
-| `/invest reload` | Reload the config | `investplugin.admin` (default: ops) |
-
----
-
-## GUI Layout
-
-### Main Menu (`/invest`)
-
-```
-[  ] [  ] [  ] [  ] [  ] [  ] [  ] [  ] [  ]   ← Top row (glass border)
-[  ] [🔴] [  ] [  ] [📄] [  ] [  ] [📦] [  ]   ← Middle row
-[  ] [  ] [  ] [  ] [  ] [  ] [  ] [🟢] [  ]   ← Bottom row
-```
-
-- **Slot 2 (🔴 Redstone Block)** — Delete: wipes your investment (no refund)
-- **Slot 5 (📄 Paper)** — Info: shows invested amount and earnings/sec; click to invest more
-- **Slot 8 (📦 Chest)** — Collect: claim your available earnings
-- **Below Slot 8 (🟢/🔴 Glass Pane)** — Auto-Collect toggle (green = on, red = off)
-
-### Confirm Menu (after typing an amount)
-
-```
-[  ] [🔴] [  ] [  ] [📄] [  ] [  ] [🟢] [  ]   ← Middle row
-```
-
-- **Slot 2 (🔴 Red Glass)** — Cancel
-- **Slot 5 (📄 Paper)** — Shows the amount being invested
-- **Slot 8 (🟢 Green Glass)** — Confirm
-
----
-
-## Data Storage
-
-Player data is stored in `plugins/InvestPlugin/data.yml` and auto-saves on:
-- Investment changes
-- Collection
-- Server shutdown
+Java 21 and Maven: `./build.sh` → `target/InvestPlugin-2.0.0.jar`. Requires Vault and an economy plugin.

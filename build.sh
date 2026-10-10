@@ -33,10 +33,10 @@ mvn clean package -q
 if [ $? -eq 0 ]; then
     echo ""
     echo "[SUCCESS] Build complete!"
-    echo "[INFO] Plugin jar located at: target/InvestPlugin-1.0.0.jar"
+    echo "[INFO] Plugin jar located at: target/InvestPlugin-2.0.0.jar"
     echo ""
     echo "Installation:"
-    echo "  1. Copy target/InvestPlugin-1.0.0.jar to your server's /plugins folder"
+    echo "  1. Copy target/InvestPlugin-2.0.0.jar to your server's /plugins folder"
     echo "  2. Install Vault plugin: https://www.spigotmc.org/resources/vault.34315/"
     echo "  3. Install an economy plugin (e.g. EssentialsX)"
     echo "  4. Restart your server"

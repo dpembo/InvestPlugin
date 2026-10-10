@@ -2,14 +2,19 @@ name: InvestPlugin
 version: '${project.version}'
 main: com.investplugin.InvestPlugin
 api-version: '1.21'
-description: Investment plugin with GUI menus
+description: Capital and investment-pot investing with a daily market move, GUI and SQL storage
 authors: [InvestPlugin]
 depend: [Vault]
+
+# Downloaded by the server on first start (needs access to Maven Central once)
+libraries:
+  - org.mariadb.jdbc:mariadb-java-client:3.5.1
+  - org.xerial:sqlite-jdbc:3.46.1.3
 
 commands:
   invest:
     description: Open the investment menu
-    usage: /invest
+    usage: /invest [deposit|withdraw|auto|status]
     permission: investplugin.invest
 
 permissions:
@@ -17,5 +22,5 @@ permissions:
     description: Allows a player to use /invest
     default: true
   investplugin.admin:
-    description: Allows admin to reload config
+    description: Allows /invest reload and /invest runcycle
     default: op

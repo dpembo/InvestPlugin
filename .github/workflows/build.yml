@@ -17,4 +17,4 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: InvestPlugin
-          path: target/InvestPlugin-1.0.0.jar
+          path: target/InvestPlugin-2.0.0.jar

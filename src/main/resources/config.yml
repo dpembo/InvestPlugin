@@ -1,27 +1,222 @@
-# InvestPlugin Configuration
+# ============================================================================
+#  InvestPlugin 2.0 - Globeworks Investment System
+#
+#  Every player has:
+#    Capital         - their invested principal
+#    Investment Pot  - accumulated profit (also the buffer that absorbs losses first)
+#    Total value     = Capital + Pot
+#
+#  Once per interval a single global % (random between min and max below) is applied
+#  to every player's CAPITAL:
+#    gain + auto-invest ON   -> gain is added to capital (compounds)
+#    gain + auto-invest OFF  -> gain is added to the pot (capital stays fixed)
+#    loss                    -> taken from the pot first, then from capital
+#
+#  Colour codes use '&'. Placeholders look like {capital}. Don't use a dollar sign
+#  directly before a '{' - use {capital} etc. which already include the currency symbol.
+# ============================================================================
 
-# The maximum amount a player can have invested at one time (0 = unlimited)
-max-invest: 1000000.0
+# Prefix for the currency in every amount shown to players
+currency-symbol: "$"
 
-# The rate multiplier applied per second to the invested amount
-# Example: rate: 0.001 means a player who invests 1000 earns 1.0 per second
-invest-rate: 0.001
+# --- Daily growth -----------------------------------------------------------
+# Random daily market move, in percent (uniform between min and max, 2 decimals)
+daily-min-percent: -1.0
+daily-max-percent: 2.0
 
-# How often (in ticks) the plugin pays out earnings (20 ticks = 1 second)
-payout-interval: 20
+# Hours between market updates. The schedule is saved, so restarts don't reset it.
+# After long downtime ONE catch-up update runs on startup (never several at once).
+daily-interval-hours: 24
 
-# Messages (supports & color codes)
+# --- Limits -----------------------------------------------------------------
+# Fee taken from every withdrawal (percent of the amount withdrawn)
+withdraw-fee-percent: 5.0
+
+# Maximum capital a player can deposit up to (deposits above this are rejected)
+max-capital: 1000000
+
+# At or above this TOTAL value the investment is frozen: no daily growth, no deposits,
+# withdrawals still allowed. It unfreezes once capital is at or below max-capital
+# AND the total is back under this threshold. 0 disables freezing.
+freeze-threshold: 2000000
+
+# New accounts start with auto-invest ON (true) or OFF (false)
+default-auto-invest: false
+
+# --- Notifications ----------------------------------------------------------
+# Show the investment summary (messages.summary) when a player with an investment joins
+notify-on-join: true
+join-notify-delay-ticks: 40
+
+# Broadcast the daily % change to the whole server
+broadcast-daily-change: true
+
+# --- Statistics shown in the GUI -------------------------------------------
+stats-window-days: 7
+# History older than this is deleted from the database
+history-retention-days: 30
+
+# --- Storage ----------------------------------------------------------------
+# Changing storage settings needs a server restart.
+storage:
+  type: sqlite            # sqlite | mariadb
+  table-prefix: invest_
+  sqlite:
+    file: invest.db       # inside plugins/InvestPlugin/
+  mariadb:
+    host: localhost
+    port: 3306
+    database: invest
+    username: invest
+    password: ""
+    ssl-mode: disable     # disable | trust | verify-ca | verify-full
+
+# Import the old 1.x data.yml on startup (once; the file is renamed to data.yml.migrated)
+migrate-yaml: true
+
+colors:
+  gain: "&a"
+  loss: "&c"
+  neutral: "&7"
+
+# --- Messages ---------------------------------------------------------------
 messages:
   prefix: "&8[&6Invest&8] &r"
   no-permission: "&cYou don't have permission to use this command."
-  enter-amount: "&eType the amount you want to invest in chat. Type &ccancel &eto abort."
-  invalid-amount: "&cInvalid amount. Please enter a positive number."
-  not-enough-money: "&cYou don't have enough money to invest that amount."
-  exceeds-max: "&cThat would exceed your maximum investment limit of &6{max}&c."
-  invest-success: "&aSuccessfully invested &6{amount}&a. Total invested: &6{total}&a."
-  invest-cancelled: "&cInvestment cancelled."
-  collect-success: "&aYou collected &6{amount}&a from your investments."
-  nothing-to-collect: "&cYou have nothing to collect."
-  investment-deleted: "&cYour investment of &6{amount} &chas been deleted. You received nothing back."
-  auto-collect-on: "&aAuto-collect is now &lON&r&a."
-  auto-collect-off: "&cAuto-collect is now &lOFF&r&c."
+  players-only: "&cOnly players can use this command."
+  usage: "&eUsage: &6/invest [deposit <amount|all> | withdraw <amount|all> | auto | status]"
+  reloaded: "&aInvestPlugin config reloaded. (Storage changes need a restart.)"
+  cycle-forced: "&aDaily cycle executed: &f{percent}"
+  enter-deposit: "&eType the amount to deposit in chat (e.g. &65000&e, &610k&e, &61.5m&e or &6all&e). Type &ccancel &eto abort."
+  enter-withdraw: "&eType the amount to withdraw (a &c{fee}% &efee applies). Use &6all &efor everything or &ccancel&e."
+  invalid-amount: "&cInvalid amount. Enter a positive number such as 5000, 10k or 1.5m."
+  cancelled: "&cCancelled."
+  not-enough-money: "&cYou don't have enough money for that."
+  economy-error: "&cThe economy plugin refused the transaction. Nothing was changed."
+  deposit-success: "&aDeposited &6{amount}&a. Capital: &6{capital}&a, total value: &6{total}&a."
+  deposit-frozen: "&cYour investment is frozen, so deposits are disabled. Withdraw to unfreeze it."
+  deposit-exceeds-max: "&cThat would exceed the maximum capital of &6{max}&c. You can deposit up to &6{room}&c."
+  withdraw-success: "&aWithdrew &6{amount}&a. After the {fee}% fee (&c{fee_amount}&a) you received &6{received}&a."
+  withdraw-too-much: "&cYou can only withdraw up to &6{total}&c."
+  nothing-to-withdraw: "&cYou have nothing invested."
+  auto-on: "&aAuto-invest is now &lON&r&a. Daily gains are added to your capital."
+  auto-off: "&cAuto-invest is now &lOFF&r&c. Daily gains go to your investment pot."
+  frozen-notice: "&bYour investment reached &6{freeze} &band is now frozen: no growth or deposits until you withdraw."
+  unfrozen-notice: "&aYour investment is no longer frozen."
+  daily-broadcast: "&7Today's investment market move: {color}{percent}"
+  state-on: "&aON"
+  state-off: "&cOFF"
+  status-active: "&aActive"
+  status-frozen: "&bFrozen"
+  # Shown on join and for /invest status (no prefix)
+  summary:
+    - "&8&m------------------------------"
+    - "&6&lYour Investment"
+    - "&7Capital: &e{capital}"
+    - "&7Investment pot: &e{pot}"
+    - "&7Total value: &6{total}"
+    - "&7Auto-invest: {auto}"
+    - "&7Status: {state}"
+    - "&8&m------------------------------"
+
+# --- GUI (/invest) ----------------------------------------------------------
+# Each item has a material, a name and a lore. Placeholders: {capital} {pot} {total}
+# {withdrawable} {fee} {max} {room} {freeze} {next} {window} {market} {gains}.
+# A lore line that is exactly {days} is replaced by one line per day.
+gui:
+  title: "&8» &6&lInvestment &8«"
+  date-format: "dd MMM"
+  no-data: "&8No data yet"
+
+  status-active:
+    material: CLOCK
+    name: "&a&lInvestment Active"
+    lore:
+      - "&7Next market update in &e{next}"
+  status-frozen:
+    material: PACKED_ICE
+    name: "&b&lInvestment Frozen"
+    lore:
+      - "&7Growth and deposits are disabled."
+      - "&7Frozen at a total value of &6{freeze}&7."
+      - "&7Withdraw until your capital is at or below &6{max}"
+      - "&7and your total is under &6{freeze}&7 to unfreeze."
+
+  capital:
+    material: GOLD_INGOT
+    name: "&6&lCapital"
+    lore:
+      - "&e{capital}"
+      - "&8Your invested principal."
+      - "&8Daily growth is calculated on this."
+  pot:
+    material: CHEST
+    name: "&e&lInvestment Pot"
+    lore:
+      - "&e{pot}"
+      - "&8Profits (and the buffer that absorbs losses first)."
+  total:
+    material: EMERALD
+    name: "&a&lTotal Value"
+    lore:
+      - "&a{total}"
+      - "&8Capital + Investment Pot"
+  withdrawable:
+    material: HOPPER
+    name: "&b&lWithdrawable"
+    lore:
+      - "&7After the {fee}% fee: &a{withdrawable}"
+
+  market:
+    material: COMPASS
+    name: "&e&lMarket - Last {window} Days"
+    line: "&7{date}: {color}{percent}"
+    lore:
+      - "&7Total change: {market}"
+      - ""
+      - "{days}"
+  gains:
+    material: PAPER
+    name: "&e&lYour Gains/Losses - Last {window} Days"
+    line: "&7{date}: {color}{amount}"
+    lore:
+      - "&7Total: {gains}"
+      - ""
+      - "{days}"
+
+  deposit:
+    material: LIME_CONCRETE
+    name: "&a&lDeposit"
+    lore:
+      - "&7Add to your capital."
+      - "&7Room left: &6{room}"
+      - ""
+      - "&eLeft-click: &7enter an amount in chat"
+      - "&eRight-click: &7deposit the maximum"
+  withdraw:
+    material: RED_CONCRETE
+    name: "&c&lWithdraw"
+    lore:
+      - "&7A &c{fee}% &7fee applies."
+      - "&7Up to &a{withdrawable} &7after the fee."
+      - ""
+      - "&eLeft-click: &7enter an amount in chat"
+      - "&eRight-click: &7withdraw everything"
+  auto-on:
+    material: LIME_DYE
+    name: "&a&lAuto-Invest: ON"
+    lore:
+      - "&7Daily gains are added to your capital"
+      - "&7so it compounds."
+      - "&7Losses still hit your pot first, then capital."
+      - ""
+      - "&eClick to turn off"
+  auto-off:
+    material: GRAY_DYE
+    name: "&c&lAuto-Invest: OFF"
+    lore:
+      - "&7Daily gains go to your investment pot."
+      - "&7Your capital stays fixed."
+      - "&7Losses still hit your pot first, then capital."
+      - ""
+      - "&eClick to turn on"

@@ -1,8 +1,7 @@
 package com.investplugin.listeners;
 
 import com.investplugin.InvestPlugin;
-import com.investplugin.gui.MenuBuilder;
-import com.investplugin.managers.InvestManager;
+import com.investplugin.util.Money;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -10,91 +9,75 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
+/** Captures the next chat message of a player who clicked Deposit/Withdraw in the menu. */
 public class ChatListener implements Listener {
 
-    private final InvestPlugin plugin;
+    public enum Type { DEPOSIT, WITHDRAW }
 
-    public static final Set<UUID> awaitingInput = new HashSet<>();
-    public static final Map<UUID, Double> pendingAmount = new HashMap<>();
+    private record Pending(Type type, long expiresAt) {}
+
+    private static final long TIMEOUT_MILLIS = 60_000L;
+
+    private final InvestPlugin plugin;
+    private final Map<UUID, Pending> awaiting = new ConcurrentHashMap<>();
 
     public ChatListener(InvestPlugin plugin) {
         this.plugin = plugin;
     }
 
-    @EventHandler(priority = EventPriority.LOWEST)
-    public void onPlayerChat(AsyncPlayerChatEvent event) {
-        Player player = event.getPlayer();
-        UUID uuid = player.getUniqueId();
+    public void await(UUID uuid, Type type) {
+        awaiting.put(uuid, new Pending(type, System.currentTimeMillis() + TIMEOUT_MILLIS));
+    }
 
-        if (!awaitingInput.contains(uuid)) return;
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onChat(AsyncPlayerChatEvent event) {
+        Player player = event.getPlayer();
+        UUID id = player.getUniqueId();
+        Pending pending = awaiting.get(id);
+        if (pending == null) return;
 
         event.setCancelled(true);
-        awaitingInput.remove(uuid);
+
+        if (System.currentTimeMillis() > pending.expiresAt()) {
+            awaiting.remove(id);
+            return;
+        }
 
         String message = event.getMessage().trim();
 
         if (message.equalsIgnoreCase("cancel")) {
-            player.sendMessage(plugin.getMessage("invest-cancelled"));
+            awaiting.remove(id);
+            player.sendMessage(plugin.msg("cancelled", Map.of()));
             return;
         }
 
-        double amount;
-        try {
-            amount = parseAmount(message);
-        } catch (NumberFormatException e) {
-            player.sendMessage(plugin.getMessage("invalid-amount"));
+        boolean all = message.equalsIgnoreCase("all") || message.equalsIgnoreCase("max");
+        double amount = all ? 0 : Money.parse(message);
+        if (!all && !(amount > 0)) {
+            // keep waiting so the player can just retype it
+            player.sendMessage(plugin.msg("invalid-amount", Map.of()));
             return;
         }
 
-        if (amount <= 0) {
-            player.sendMessage(plugin.getMessage("invalid-amount"));
-            return;
-        }
-
+        awaiting.remove(id);
         plugin.getServer().getScheduler().runTask(plugin, () -> {
-            InvestManager manager = plugin.getInvestManager();
-
-            if (!plugin.getEconomy().has(player, amount)) {
-                player.sendMessage(plugin.getMessage("not-enough-money"));
-                return;
+            if (!player.isOnline()) return;
+            if (pending.type() == Type.DEPOSIT) {
+                if (all) plugin.getActions().depositMax(player);
+                else plugin.getActions().deposit(player, amount);
+            } else {
+                if (all) plugin.getActions().withdrawAll(player);
+                else plugin.getActions().withdraw(player, amount);
             }
-
-            double maxInvest = manager.getMaxInvest();
-            double currentInvested = manager.getInvested(uuid);
-            if (maxInvest > 0 && currentInvested + amount > maxInvest) {
-                player.sendMessage(plugin.getMessage("exceeds-max")
-                        .replace("{max}", manager.formatMoney(maxInvest)));
-                return;
-            }
-
-            pendingAmount.put(uuid, amount);
-            player.openInventory(MenuBuilder.buildConfirmMenu(amount, plugin));
         });
     }
 
     @EventHandler
-    public void onPlayerQuit(PlayerQuitEvent event) {
-        UUID uuid = event.getPlayer().getUniqueId();
-        awaitingInput.remove(uuid);
-        pendingAmount.remove(uuid);
-    }
-
-    private double parseAmount(String input) throws NumberFormatException {
-        input = input.trim().toLowerCase();
-        if (input.endsWith("b")) {
-            return Double.parseDouble(input.replace("b", "")) * 1_000_000_000;
-        } else if (input.endsWith("m")) {
-            return Double.parseDouble(input.replace("m", "")) * 1_000_000;
-        } else if (input.endsWith("k")) {
-            return Double.parseDouble(input.replace("k", "")) * 1_000;
-        } else {
-            return Double.parseDouble(input);
-        }
+    public void onQuit(PlayerQuitEvent event) {
+        awaiting.remove(event.getPlayer().getUniqueId());
     }
 }
