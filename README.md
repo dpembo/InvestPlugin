@@ -21,6 +21,7 @@ Every `daily-interval-hours` (default 24) one global % is drawn at random betwee
 * **Freeze:** at total value ≥ `freeze-threshold` (2,000,000) the account is frozen — no growth, no deposits,
   withdrawals still allowed. It unfreezes when capital ≤ `max-capital` **and** total < `freeze-threshold`.
 * Accounts with capital ≤ 0 and frozen accounts are skipped by the daily cycle. Capital, pot and total never go below 0.
+* **Turning auto-invest ON moves the whole pot into capital** (the pot icon is greyed out while it's on). From then on losses come straight off capital, and turning it off later does not move money back. Not allowed while frozen.
 * Players with an investment get a summary on join (`notify-on-join`); the daily % can be broadcast (`broadcast-daily-change`).
 
 ## Commands

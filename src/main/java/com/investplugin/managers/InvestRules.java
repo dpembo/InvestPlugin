@@ -87,6 +87,16 @@ public final class InvestRules {
         return new Withdrawal(WithdrawStatus.OK, amount, fee, received);
     }
 
+    /** Moves the whole investment pot into capital (used when auto-invest is switched on). Returns the amount moved. */
+    public static double foldPotIntoCapital(Account a, Rules r) {
+        double moved = a.getPot();
+        if (moved <= 0) return 0;
+        a.setCapital(Money.round2(a.getCapital() + moved));
+        a.setPot(0);
+        refreshFreeze(a, r);
+        return moved;
+    }
+
     /** How much more capital can be deposited right now. */
     public static double maxDeposit(Account a, Rules r) {
         if (a.isFrozen()) return 0;

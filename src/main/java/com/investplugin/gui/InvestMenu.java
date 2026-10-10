@@ -79,7 +79,9 @@ public final class InvestMenu {
             inv.setItem(SLOT_STATUS, item(plugin, "status-active", Material.CLOCK, ph, null));
         }
         inv.setItem(SLOT_CAPITAL, item(plugin, "capital", Material.GOLD_INGOT, ph, null));
-        inv.setItem(SLOT_POT, item(plugin, "pot", Material.CHEST, ph, null));
+        inv.setItem(SLOT_POT, acc.isAutoInvest()
+                ? item(plugin, "pot-disabled", Material.LIGHT_GRAY_STAINED_GLASS_PANE, ph, null)
+                : item(plugin, "pot", Material.CHEST, ph, null));
         inv.setItem(SLOT_TOTAL, item(plugin, "total", Material.EMERALD, ph, null));
         inv.setItem(SLOT_WITHDRAWABLE, item(plugin, "withdrawable", Material.HOPPER, ph, null));
         inv.setItem(SLOT_MARKET, item(plugin, "market", Material.COMPASS, ph, marketLines(plugin, manager, now)));

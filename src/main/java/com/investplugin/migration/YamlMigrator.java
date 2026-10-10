@@ -14,7 +14,7 @@ import java.util.logging.Logger;
 
 /**
  * Reads the old 1.x data.yml (players.&lt;uuid&gt;.invested / claimable / auto-collect).
- * invested -&gt; capital, claimable (uncollected earnings) -&gt; investment pot.
+ * invested -&gt; capital, claimable (uncollected earnings) -&gt; investment pot (or capital when default auto-invest is on).
  * The old auto-collect flag has no equivalent, so every migrated account gets the configured default auto-invest.
  */
 public final class YamlMigrator {
@@ -41,7 +41,12 @@ public final class YamlMigrator {
             double claimable = Math.max(0, players.getDouble(key + ".claimable", 0));
             if (invested <= 0 && claimable <= 0) continue;
 
-            out.add(new Account(id, Money.round2(invested), Money.round2(claimable), defaultAutoInvest, false));
+            if (defaultAutoInvest) {
+                // the pot is unused while auto-invest is on, so uncollected earnings go straight into capital
+                out.add(new Account(id, Money.round2(invested + claimable), 0, true, false));
+            } else {
+                out.add(new Account(id, Money.round2(invested), Money.round2(claimable), false, false));
+            }
         }
         return out;
     }

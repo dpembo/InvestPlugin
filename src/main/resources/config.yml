@@ -101,6 +101,8 @@ messages:
   withdraw-too-much: "&cYou can only withdraw up to &6{total}&c."
   nothing-to-withdraw: "&cYou have nothing invested."
   auto-on: "&aAuto-invest is now &lON&r&a. Daily gains are added to your capital."
+  auto-on-moved: "&aAuto-invest is now &lON&r&a. Your pot of &6{moved} &awas moved into your capital, which is now &6{capital}&a."
+  auto-frozen: "&cYou can't turn auto-invest on while your investment is frozen."
   auto-off: "&cAuto-invest is now &lOFF&r&c. Daily gains go to your investment pot."
   frozen-notice: "&bYour investment reached &6{freeze} &band is now frozen: no growth or deposits until you withdraw."
   unfrozen-notice: "&aYour investment is no longer frozen."
@@ -156,6 +158,13 @@ gui:
     lore:
       - "&e{pot}"
       - "&8Profits (and the buffer that absorbs losses first)."
+  # Shown instead of "pot" while auto-invest is ON (the pot is not used then)
+  pot-disabled:
+    material: LIGHT_GRAY_STAINED_GLASS_PANE
+    name: "&8&mInvestment Pot"
+    lore:
+      - "&7Not used while auto-invest is on."
+      - "&7Daily gains go straight into your capital."
   total:
     material: EMERALD
     name: "&a&lTotal Value"
@@ -209,7 +218,7 @@ gui:
     lore:
       - "&7Daily gains are added to your capital"
       - "&7so it compounds."
-      - "&7Losses still hit your pot first, then capital."
+      - "&7With no pot, losses come straight off your capital."
       - ""
       - "&eClick to turn off"
   auto-off:
@@ -218,6 +227,7 @@ gui:
     lore:
       - "&7Daily gains go to your investment pot."
       - "&7Your capital stays fixed."
-      - "&7Losses still hit your pot first, then capital."
+      - "&7Losses hit your pot first, then capital."
       - ""
-      - "&eClick to turn on"
+      - "&eClick to turn on: your pot (&6{pot}&e) moves"
+      - "&einto capital and can no longer cushion losses."

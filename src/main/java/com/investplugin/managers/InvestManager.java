@@ -250,13 +250,32 @@ public final class InvestManager {
         return result;
     }
 
-    /** Flips auto-invest and returns the new state. */
-    public boolean toggleAuto(UUID uuid) {
+    /**
+     * @param blockedByFreeze auto-invest cannot be switched on while frozen
+     * @param autoInvest      the state after the toggle
+     * @param moved           pot amount that was moved into capital (only when switched on)
+     */
+    public record AutoResult(boolean blockedByFreeze, boolean autoInvest, double moved) {}
+
+    /**
+     * Flips auto-invest. Switching it ON moves the whole investment pot into capital (the pot is unused while
+     * auto-invest is on). That is refused while frozen, because it would push capital further above the cap.
+     */
+    public AutoResult toggleAuto(UUID uuid) {
         Account existing = accounts.get(uuid);
         Account work = existing != null ? existing.copy() : new Account(uuid, 0, 0, defaultAutoInvest(), false);
-        work.setAutoInvest(!work.isAutoInvest());
+
+        if (work.isAutoInvest()) {
+            work.setAutoInvest(false);
+            commit(work);
+            return new AutoResult(false, false, 0);
+        }
+        if (work.isFrozen()) return new AutoResult(true, false, 0);
+
+        work.setAutoInvest(true);
+        double moved = InvestRules.foldPotIntoCapital(work, rules());
         commit(work);
-        return work.isAutoInvest();
+        return new AutoResult(false, true, moved);
     }
 
     // ── Daily cycle ───────────────────────────────────────────────────────────

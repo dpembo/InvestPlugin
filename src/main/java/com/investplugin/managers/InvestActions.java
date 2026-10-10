@@ -116,8 +116,16 @@ public final class InvestActions {
     }
 
     public void toggleAuto(Player p) {
-        boolean on = manager.toggleAuto(p.getUniqueId());
-        p.sendMessage(plugin.msg(on ? "auto-on" : "auto-off", ph(p.getUniqueId())));
+        UUID id = p.getUniqueId();
+        InvestManager.AutoResult r = manager.toggleAuto(id);
+        if (r.blockedByFreeze()) {
+            p.sendMessage(plugin.msg("auto-frozen", ph(id)));
+        } else if (r.autoInvest()) {
+            String key = r.moved() > 0 ? "auto-on-moved" : "auto-on";
+            p.sendMessage(plugin.msg(key, ph(id, "moved", plugin.money(r.moved()))));
+        } else {
+            p.sendMessage(plugin.msg("auto-off", ph(id)));
+        }
     }
 
     public void sendSummary(Player p) {
