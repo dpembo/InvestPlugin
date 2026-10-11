@@ -24,6 +24,8 @@ Every `daily-interval-hours` (default 24) one global % is drawn at random betwee
 * **Turning auto-invest ON moves the whole pot into capital** (the pot icon is greyed out while it's on). From then on losses come straight off capital, and turning it off later does not move money back. Not allowed while frozen.
 * Players with an investment get a summary on join (`notify-on-join`); the daily % can be broadcast (`broadcast-daily-change`).
 
+Players: see the [Player Guide](docs/PLAYER_GUIDE.md).
+
 ## Commands
 
 | Command | Description |
@@ -33,6 +35,7 @@ Every `daily-interval-hours` (default 24) one global % is drawn at random betwee
 | `/invest withdraw <amount\|all>` | Withdraw (fee applies) |
 | `/invest auto` | Toggle auto-invest |
 | `/invest status` | Print your summary |
+| `/invest help` | Show the clickable link to the player guide |
 | `/invest reload` | Reload config.yml (admin; storage changes need a restart) |
 | `/invest runcycle [percent]` | Run the daily cycle now (admin; restarts the timer). Optional percent forces that exact move, e.g. `/invest runcycle -1.5` |
 

@@ -3,6 +3,12 @@ package com.investplugin.commands;
 import com.investplugin.InvestPlugin;
 import com.investplugin.gui.InvestMenu;
 import com.investplugin.util.Money;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.event.HoverEvent;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -15,6 +21,8 @@ import java.util.Locale;
 import java.util.Map;
 
 public class InvestCommand implements CommandExecutor, TabCompleter {
+
+    private static final String GUIDE_URL = "https://globeworks.uk/player-guides/investment.html";
 
     private final InvestPlugin plugin;
 
@@ -66,6 +74,13 @@ public class InvestCommand implements CommandExecutor, TabCompleter {
 
         switch (sub) {
             case "" -> player.openInventory(InvestMenu.build(player, plugin));
+            case "help" -> player.sendMessage(
+                    LegacyComponentSerializer.legacySection().deserialize(plugin.msg("help", Map.of()))
+                            .append(Component.text("Globeworks | Investment Guide", NamedTextColor.BLUE)
+                                    .decorate(TextDecoration.UNDERLINED)
+                                    .clickEvent(ClickEvent.openUrl(GUIDE_URL))
+                                    .hoverEvent(HoverEvent.showText(Component.text("Open the investment guide"))))
+            );
             case "status", "info" -> plugin.getActions().sendSummary(player);
             case "auto" -> plugin.getActions().toggleAuto(player);
             case "deposit", "withdraw" -> {
@@ -97,7 +112,7 @@ public class InvestCommand implements CommandExecutor, TabCompleter {
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         List<String> out = new ArrayList<>();
         if (args.length == 1) {
-            out.addAll(List.of("deposit", "withdraw", "auto", "status"));
+            out.addAll(List.of("deposit", "withdraw", "auto", "status", "help"));
             if (sender.hasPermission("investplugin.admin")) out.addAll(List.of("reload", "runcycle"));
             String prefix = args[0].toLowerCase(Locale.ROOT);
             out.removeIf(s -> !s.startsWith(prefix));
